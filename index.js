@@ -1,5 +1,5 @@
 const express = require('express');
-const { exec } = require('child_process');  // To run yt-dlp commands
+const youtubedl = require('youtube-dl-exec');
 
 const app = express();
 
@@ -12,44 +12,41 @@ app.get('/', (req, res) => {
   );
 });
 
-// Video Info Route using yt-dlp
-app.get('/video-info', (req, res) => {
+// Video Info Route using youtube-dl-exec
+app.get('/video-info', async (req, res) => {
   const videoUrl = req.query.url;
 
   if (!videoUrl) {
     return res.status(400).json({ error: 'URL is required' });
   }
 
-  // Build the yt-dlp command to fetch video info
-  const command = `yt-dlp -j --no-warnings --quiet ${videoUrl}`;
+  try {
+    // Fetch video information using youtube-dl-exec
+    const videoInfo = await youtubedl(videoUrl, {
+      dumpSingleJson: true,
+      noWarnings: true,
+      quiet: true,
+    });
 
-  exec(command, (error, stdout, stderr) => {
-    if (error) {
-      return res.status(500).json({ error: 'Failed to fetch video information', details: stderr });
+    const formats = videoInfo.formats
+      .filter((format) => format.acodec !== 'none' && format.vcodec !== 'none') // Both audio and video
+      .map((format) => ({
+        resolution: format.format_note || 'Unknown',
+        size: format.filesize ? `${(format.filesize / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
+        url: format.url,
+      }));
+
+    if (formats.length === 0) {
+      return res.status(404).json({ error: 'No downloadable formats available' });
     }
 
-    try {
-      const videoInfo = JSON.parse(stdout);  // yt-dlp outputs JSON data
-      const formats = videoInfo.formats
-        .filter((format) => format.has_audio && format.has_video)
-        .map((format) => ({
-          resolution: format.quality,
-          size: format.filesize ? `${(format.filesize / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
-          url: format.url,
-        }));
-
-      if (formats.length === 0) {
-        return res.status(404).json({ error: 'No downloadable formats available' });
-      }
-
-      res.json({
-        title: videoInfo.title,
-        availableFormats: formats,
-      });
-    } catch (parseError) {
-      res.status(500).json({ error: 'Error parsing video information', details: parseError.message });
-    }
-  });
+    res.json({
+      title: videoInfo.title,
+      availableFormats: formats,
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch video information', details: error.message });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
