@@ -3,7 +3,6 @@ const ytdl = require('ytdl-core');
 
 const app = express();
 
-// Default route for the root URL
 app.get('/', (req, res) => {
   res.send(
     '<h1>YouTube Video Info API</h1>' +
@@ -12,7 +11,6 @@ app.get('/', (req, res) => {
   );
 });
 
-// Video Info Route
 app.get('/video-info', async (req, res) => {
   const videoUrl = req.query.url;
 
@@ -21,12 +19,23 @@ app.get('/video-info', async (req, res) => {
   }
 
   try {
-    const videoInfo = await ytdl.getInfo(videoUrl);
+    const videoInfo = await ytdl.getInfo(videoUrl, {
+      requestOptions: {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+      },
+    });
+
     const formats = videoInfo.formats
       .filter((format) => format.hasVideo && format.hasAudio)
       .map((format) => ({
         resolution: format.qualityLabel,
-        size: format.contentLength ? `${(format.contentLength / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
+        size: format.contentLength
+          ? `${(format.contentLength / 1024 / 1024).toFixed(2)} MB`
+          : 'Unknown',
         url: format.url,
       }));
 
@@ -34,19 +43,29 @@ app.get('/video-info', async (req, res) => {
       return res.status(404).json({ error: 'No downloadable formats available' });
     }
 
-    const videoDetails = {
+    res.json({
       title: videoInfo.videoDetails.title,
       availableFormats: formats,
-    };
-
-    res.json(videoDetails);
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch video information', details: error.message });
+    if (error.message.includes('410')) {
+      return res.status(410).json({
+        error: 'This video is restricted or unavailable.',
+        details: error.message,
+      });
+    }
+
+    res.status(500).json({
+      error: 'Failed to fetch video information',
+      details: error.message,
+    });
   }
 });
 
-app.listen(3000, () => {
-  console.log('Server is running on port 3000');
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 
 module.exports = app;
