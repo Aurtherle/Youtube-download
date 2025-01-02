@@ -1,7 +1,18 @@
 const express = require('express');
 const ytdl = require('ytdl-core');
+
 const app = express();
 
+// Default route for the root URL
+app.get('/', (req, res) => {
+  res.send(
+    '<h1>YouTube Video Info API</h1>' +
+    '<p>Use the <code>/video-info</code> endpoint to get video details and download links.</p>' +
+    '<p>Example: <code>/video-info?url=https://www.youtube.com/watch?v=dQw4w9WgXcQ</code></p>'
+  );
+});
+
+// Video Info Route
 app.get('/video-info', async (req, res) => {
   const videoUrl = req.query.url;
 
@@ -12,7 +23,7 @@ app.get('/video-info', async (req, res) => {
   try {
     const videoInfo = await ytdl.getInfo(videoUrl);
     const formats = videoInfo.formats
-      .filter((format) => format.hasVideo && format.hasAudio) // Only include formats with video + audio
+      .filter((format) => format.hasVideo && format.hasAudio)
       .map((format) => ({
         resolution: format.qualityLabel,
         size: format.contentLength ? `${(format.contentLength / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
