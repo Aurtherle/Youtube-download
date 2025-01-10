@@ -1,5 +1,5 @@
 const express = require('express');
-const youtubedl = require('youtube-dl-exec');
+const { getVideo } = require('@neoxr/youtube-scraper');
 
 const app = express();
 
@@ -12,7 +12,7 @@ app.get('/', (req, res) => {
   );
 });
 
-// Video Info Route using youtube-dl-exec
+// Video Info Route using @neoxr/youtube-scraper
 app.get('/video-info', async (req, res) => {
   const videoUrl = req.query.url;
 
@@ -21,18 +21,21 @@ app.get('/video-info', async (req, res) => {
   }
 
   try {
-    // Fetch video information using youtube-dl-exec
-    const videoInfo = await youtubedl(videoUrl, {
-      dumpSingleJson: true,
-      noWarnings: true,
-      quiet: true,
-    });
+    // Fetch video information using @neoxr/youtube-scraper
+    const videoInfo = await getVideo(videoUrl);
+
+    if (!videoInfo || !videoInfo.formats) {
+      return res.status(404).json({ error: 'No video information found' });
+    }
 
     const formats = videoInfo.formats
-      .filter((format) => format.acodec !== 'none' && format.vcodec !== 'none') // Both audio and video
+      .filter((format) => format.mimeType && format.url) // Valid formats with URLs
       .map((format) => ({
-        resolution: format.format_note || 'Unknown',
-        size: format.filesize ? `${(format.filesize / 1024 / 1024).toFixed(2)} MB` : 'Unknown',
+        quality: format.qualityLabel || 'Unknown',
+        mimeType: format.mimeType,
+        size: format.contentLength
+          ? `${(parseInt(format.contentLength) / 1024 / 1024).toFixed(2)} MB`
+          : 'Unknown',
         url: format.url,
       }));
 
@@ -42,6 +45,7 @@ app.get('/video-info', async (req, res) => {
 
     res.json({
       title: videoInfo.title,
+      thumbnail: videoInfo.thumbnails.pop()?.url || 'No thumbnail available',
       availableFormats: formats,
     });
   } catch (error) {
