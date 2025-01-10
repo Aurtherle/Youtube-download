@@ -1,5 +1,5 @@
 {
-  "name": "Ytdl-api",
+  "name": "Youtube-download",
   "version": "1.0.0",
   "description": "A YouTube downloader API built with @neoxr/youtube-scraper and deployed on Vercel.",
   "main": "index.js",
