@@ -1,8 +1,17 @@
 {
+  "name": "Ytdl-api",
+  "version": "1.0.0",
+  "description": "A YouTube downloader API built with @neoxr/youtube-scraper and deployed on Vercel.",
+  "main": "index.js",
+  "scripts": {
+    "start": "vercel dev",
+    "build": "vercel build"
+  },
   "dependencies": {
-    "express": "^4.21.2",
-    "ytdl-core": "^4.11.5",
-    "youtube-dl-exec": "^2.0.5",
-    "@neoxr/youtube-scraper": "latest"
-  }
+    "@neoxr/youtube-scraper": "latest",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {},
+  "author": "AURTHER",
+  "license": "MIT"
 }
